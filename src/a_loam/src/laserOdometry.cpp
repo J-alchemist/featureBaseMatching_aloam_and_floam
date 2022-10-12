@@ -83,6 +83,7 @@ std::queue<sensor_msgs::PointCloud2ConstPtr> fullPointsBuf;
 std::mutex mBuf;
 
 // undistort lidar point
+// 将当前帧Lidar坐标系下的点云变换到上一帧Lidar坐标系下（也就是当前帧的初始位姿，起始位姿，所以函数名是TransformToStart）
 void TransformToStart(PointType const *const pi, PointType *const po)
 {
     //interpolation ratio
@@ -180,7 +181,7 @@ int main(int argc, char **argv)
     ros::Publisher pubLaserCloudCornerLast = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_corner_last", 100);
     ros::Publisher pubLaserCloudSurfLast = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf_last", 100);
     ros::Publisher pubLaserCloudFullRes = nh.advertise<sensor_msgs::PointCloud2>("/velodyne_cloud_3", 100);     // 发布点云xx3
-    ros::Publisher pubLaserOdometry = nh.advertise<nav_msgs::Odometry>("/laser_odom_to_init", 100);         //里程计
+    ros::Publisher pubLaserOdometry = nh.advertise<nav_msgs::Odometry>("/laser_odom_to_init", 100);         // 里程计
     ros::Publisher pubLaserPath = nh.advertise<nav_msgs::Path>("/laser_odom_path", 100);           
 
     nav_msgs::Path laserPath;
@@ -214,7 +215,7 @@ int main(int argc, char **argv)
             // 取出首元素
             mBuf.lock();
             cornerPointsSharp->clear(); 
-            pcl::fromROSMsg(*cornerSharpBuf.front(), *cornerPointsSharp);       //格式转换  首地址元素开始转换
+            pcl::fromROSMsg(*cornerSharpBuf.front(), *cornerPointsSharp);       //格式转换  首地址元素开始转换  取出一帧
             cornerSharpBuf.pop();    //弹出前面一个元素 实现更新    
 
             cornerPointsLessSharp->clear();
@@ -243,24 +244,24 @@ int main(int argc, char **argv)
                 // 将surfPointsLessFlat保存至laserCloudSurfLast，以及更新对应的kdtree
                 systemInited = true;
                 std::cout << "Initialization finished \n";
-            }
+            } 
             else
             {   // 当前帧特征点size
-                int cornerPointsSharpNum = cornerPointsSharp->points.size();         //一般为2
-                int surfPointsFlatNum = surfPointsFlat->points.size();      // 4 // ceres一共6个约束
+                int cornerPointsSharpNum = cornerPointsSharp->points.size();   // 2x6x16
+                int surfPointsFlatNum = surfPointsFlat->points.size();      // 4x6x16 
 
                 TicToc t_opt;
                 for (size_t opti_counter = 0; opti_counter < 2; ++opti_counter)     // ceres匹配  2次迭代求解
                 {
-                    corner_correspondence = 0;  // 角点匹配的点对的数量
-                    plane_correspondence = 0;   // 面点匹配的点对的数量
+                    corner_correspondence = 0;  // 角点成功匹配的点对的数量
+                    plane_correspondence = 0;   // 面点成功匹配的点对的数量
 
                     // 【1】设置ceres求解器，构建最小二乘问题
                     ceres::LossFunction *loss_function = NULL;
                     loss_function = new ceres::HuberLoss(0.1);     // 设置核函数的鲁棒核函数huber , 残差大于0.1的点 ,则权重降低
                     // loss_function = new ceres::CauchyLoss(0.1);                   // 柯西核函数   
 
-                    ceres::LocalParameterization *q_parameterization = new ceres::EigenQuaternionParameterization(); // //由于旋转不满足一般的加法,所以要用 ceres自带的 local Param 
+                    ceres::LocalParameterization *q_parameterization = new ceres::EigenQuaternionParameterization(); // 由于旋转不满足一般的加法,所以要用 ceres自带的 local Param 
                     ceres::Problem::Options problem_options;
                     
                     ceres::Problem problem(problem_options);    
@@ -373,7 +374,7 @@ int main(int argc, char **argv)
                                                          laserCloudCornerLast->points[minPointInd2].z);
 
                             double s;
-                            if (DISTORTION)     // ????? 进行插值     
+                            if (DISTORTION)     // 进行插值     
                                 s = (cornerPointsSharp->points[i].intensity - int(cornerPointsSharp->points[i].intensity)) / SCAN_PERIOD;   // 分子为小数部分，当前点的时间戳占比
                             else
                                 s = 1.0;
@@ -485,8 +486,7 @@ int main(int argc, char **argv)
                     //printf("coner_correspondance %d, plane_correspondence %d \n", corner_correspondence, plane_correspondence);
                     printf("data association time %f ms \n", t_data.toc());
 
-                    // if ((corner_correspondence + plane_correspondence) < 10)        // 特征匹配不太上(特征相关性弱)
-                    if ((corner_correspondence + plane_correspondence) < 6) 
+                    if ((corner_correspondence + plane_correspondence) < 10)        // 特征匹配不太上(特征相关性弱)
                     {
                         printf("less correspondence! *************************************************\n");
                     }
@@ -569,6 +569,7 @@ int main(int argc, char **argv)
             // std::cout << "the size of corner last is " << laserCloudCornerLastNum << ", and the size of surf last is " << laserCloudSurfLastNum << '\n';
            
             // 存储特征在kd树上
+            // ! kd树每次只会保存最近一次setInputCloud的数据
             kdtreeCornerLast->setInputCloud(laserCloudCornerLast);      
             kdtreeSurfLast->setInputCloud(laserCloudSurfLast);
 

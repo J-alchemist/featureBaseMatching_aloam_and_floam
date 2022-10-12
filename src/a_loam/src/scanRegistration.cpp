@@ -88,7 +88,7 @@ void removeClosedPointCloud(const pcl::PointCloud<PointT> &cloud_in,
 
 
 /**  一帧雷达数据的数据流：
- *              laserCloudMsg  ==>  laserCloudIn  ==>  point  ==>  laserCloudScans   ==>   laserCloud
+ *   laserCloudMsg  ==>  laserCloudIn  ==>  point  ==>  laserCloudScans   ==>   laserCloud
 */
 // 点云有序化 + 特征点提取
 void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)       //雷达回调
@@ -221,7 +221,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)   
         // 某个点在 该帧下的角度位置
         // relTime是0-1之间
         float relTime = (ori - startOri) / (endOri - startOri);
-        point.intensity = scanID + scanPeriod * relTime;        // 小数部分存储该点在该帧中真实的扫描时刻，整数部分为ring
+        point.intensity = scanID + scanPeriod * relTime;        // ! 小数部分存储该点在该帧中真实的扫描时刻，整数部分为ring
         laserCloudScans[scanID].push_back(point);       // 保存每个ring值对应的点云
     }
     
@@ -270,14 +270,14 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)   
         if( scanEndInd[i] - scanStartInd[i] < 6)
             continue;
         pcl::PointCloud<PointType>::Ptr surfPointsLessFlatScan(new pcl::PointCloud<PointType>);
-        for (int j = 0; j < 6; j++)     // 每根线束 分别在6个方向寻找 一些特征
-        {
+        for (int j = 0; j < 6; j++)     // 每根线束 分别在6个方向寻找特征: 每个方向极大特征2+4
+        {                               // 16线为例, 因此每帧线束提取极大特征: 16x6x(2+4)
             int sp = scanStartInd[i] + (scanEndInd[i] - scanStartInd[i]) * j / 6;               // start point
             int ep = scanStartInd[i] + (scanEndInd[i] - scanStartInd[i]) * (j + 1) / 6 - 1;     // end point
 
             TicToc t_tmp;
             // 将范围中的元素[first,last)按升序排序
-            std::sort (cloudSortInd + sp, cloudSortInd + ep + 1, comp);     // ! 按照曲率进行升序排序
+            std::sort (cloudSortInd + sp, cloudSortInd + ep + 1, comp);     // ! 按照曲率进行升序排序  cloudCurvature
             t_q_sort += t_tmp.toc();
 
             int largestPickedNum = 0;
@@ -451,7 +451,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)   
         ROS_WARN("scan registration process over 100ms");
 }
 
-int main(int argc, char **argv)
+int main(int argc, char **argv) 
 {
     ros::init(argc, argv, "scanRegistration");
     ros::NodeHandle nh;
