@@ -10,7 +10,6 @@
 #include <Eigen/Geometry>
 
 void getTransformFromSe3(const Eigen::Matrix<double,6,1>& se3, Eigen::Quaterniond& q, Eigen::Vector3d& t);
-
 Eigen::Matrix3d skew(Eigen::Vector3d& mat_in);
 
 class EdgeAnalyticCostFunction : public ceres::SizedCostFunction<1, 7> {
@@ -41,8 +40,8 @@ public:
 	
     PoseSE3Parameterization() {}
     virtual ~PoseSE3Parameterization() {}
-    virtual bool Plus(const double* x, const double* delta, double* x_plus_delta) const;
-    virtual bool ComputeJacobian(const double* x, double* jacobian) const;
+    virtual bool Plus(const double* x, const double* delta, double* x_plus_delta) const;		// 重写了
+    virtual bool ComputeJacobian(const double* x, double* jacobian) const;		// 重写了
     virtual int GlobalSize() const { return 7; }
     virtual int LocalSize() const { return 6; }
 };

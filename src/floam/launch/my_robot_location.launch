@@ -7,8 +7,16 @@
     <param name="/points_topic" type="string" value="/lslidar_point_cloud" />
     <!-- <param name="/points_topic" type="string" value="/kitti/velo/pointcloud" /> -->
 
+    <!-- 是否使用gnss(室内外场景, 定位切换下使用) -->
+    <param name="is_use_gnss" type="bool" value="false" />
+
     <!-- 是否发布tf数据 -->
     <param name="is_publish_tf" type="bool" value="true" />
+
+    <!-- tracked frame -->
+    <param name="odom_frame_id" type="string" value="map" />
+    <param name="odom_child_frame_id" type="string" value="base_link" />
+
     <!--- Sim Time -->
     <param name="/use_sim_time" value="true" />
     <!-- 雷达频率 -->

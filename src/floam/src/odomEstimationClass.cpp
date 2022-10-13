@@ -34,32 +34,32 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
     if(optimization_count>2)
         optimization_count--;
 
-    Eigen::Isometry3d odom_prediction = odom * (last_odom.inverse() * odom);
+    Eigen::Isometry3d odom_prediction = odom * (last_odom.inverse() * odom);        // ! 帧间递推 (匀速假设进行递推, 初值)
     last_odom = odom;
     odom = odom_prediction;
 
     q_w_curr = Eigen::Quaterniond(odom.rotation());
     t_w_curr = odom.translation();
 
-    pcl::PointCloud<pcl::PointXYZI>::Ptr downsampledEdgeCloud(new pcl::PointCloud<pcl::PointXYZI>());
+    pcl::PointCloud<pcl::PointXYZI>::Ptr downsampledEdgeCloud(new pcl::PointCloud<pcl::PointXYZI>());   // ! 降采样特征
     pcl::PointCloud<pcl::PointXYZI>::Ptr downsampledSurfCloud(new pcl::PointCloud<pcl::PointXYZI>());
     downSamplingToMap(edge_in,downsampledEdgeCloud,surf_in,downsampledSurfCloud);
     //ROS_WARN("point nyum%d,%d",(int)downsampledEdgeCloud->points.size(), (int)downsampledSurfCloud->points.size());
     if(laserCloudCornerMap->points.size()>10 && laserCloudSurfMap->points.size()>50){
-        kdtreeEdgeMap->setInputCloud(laserCloudCornerMap);
-        kdtreeSurfMap->setInputCloud(laserCloudSurfMap);
+        kdtreeEdgeMap->setInputCloud(laserCloudCornerMap);      // ! submap建立特征的kd搜索树
+        kdtreeSurfMap->setInputCloud(laserCloudSurfMap);        
 
         for (int iterCount = 0; iterCount < optimization_count; iterCount++){
             ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
             ceres::Problem::Options problem_options;
             ceres::Problem problem(problem_options);
 
-            problem.AddParameterBlock(parameters, 7, new PoseSE3Parameterization());
+            problem.AddParameterBlock(parameters, 7, new PoseSE3Parameterization());        // aloam是 4+3
             
-            addEdgeCostFactor(downsampledEdgeCloud,laserCloudCornerMap,problem,loss_function);
+            addEdgeCostFactor(downsampledEdgeCloud,laserCloudCornerMap,problem,loss_function);      // ! 添加残差计算,并进行1次去畸,与loam的mapping部分因子构建完全一致
             addSurfCostFactor(downsampledSurfCloud,laserCloudSurfMap,problem,loss_function);
 
-            ceres::Solver::Options options;
+            ceres::Solver::Options options;     // 开始优化
             options.linear_solver_type = ceres::DENSE_QR;
             options.max_num_iterations = 4;
             options.minimizer_progress_to_stdout = false;
@@ -68,18 +68,18 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
             ceres::Solver::Summary summary;
 
             ceres::Solve(options, &problem, &summary);
-
         }
     }else{
         printf("not enough points in map to associate, map error");
     }
     odom = Eigen::Isometry3d::Identity();
-    odom.linear() = q_w_curr.toRotationMatrix();
-    odom.translation() = t_w_curr;
-    addPointsToMap(downsampledEdgeCloud,downsampledSurfCloud);
+    odom.linear() = q_w_curr.toRotationMatrix();            //! linear() 得到旋转矩阵
+    odom.translation() = t_w_curr;          // 平移部分填充 
+    addPointsToMap(downsampledEdgeCloud, downsampledSurfCloud);     // ! 点云转换, 2次去畸, 并维护一个局部地图
 
 }
 
+// 利用转换后的位姿,再对点云进行转换
 void OdomEstimationClass::pointAssociateToMap(pcl::PointXYZI const *const pi, pcl::PointXYZI *const po)
 {
     Eigen::Vector3d point_curr(pi->x, pi->y, pi->z);
@@ -127,7 +127,7 @@ void OdomEstimationClass::addEdgeCostFactor(const pcl::PointCloud<pcl::PointXYZI
             {
                 Eigen::Matrix<double, 3, 1> tmpZeroMean = nearCorners[j] - center;
                 covMat = covMat + tmpZeroMean * tmpZeroMean.transpose();
-            }
+            } 
 
             Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> saes(covMat);
 
@@ -212,7 +212,7 @@ void OdomEstimationClass::addPointsToMap(const pcl::PointCloud<pcl::PointXYZI>::
     for (int i = 0; i < (int)downsampledEdgeCloud->points.size(); i++)
     {
         pcl::PointXYZI point_temp;
-        pointAssociateToMap(&downsampledEdgeCloud->points[i], &point_temp);
+        pointAssociateToMap(&downsampledEdgeCloud->points[i], &point_temp);     // 利用转换后的位姿,再对点云进行转换去畸变,组合submap
         laserCloudCornerMap->push_back(point_temp); 
     }
     
@@ -223,6 +223,7 @@ void OdomEstimationClass::addPointsToMap(const pcl::PointCloud<pcl::PointXYZI>::
         laserCloudSurfMap->push_back(point_temp);
     }
     
+    // ! Cropboxfilter的参数, 根据当前定位分割一个局部地图submap
     double x_min = +odom.translation().x()-100;
     double y_min = +odom.translation().y()-100;
     double z_min = +odom.translation().z()-100;

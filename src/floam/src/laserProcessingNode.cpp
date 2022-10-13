@@ -70,13 +70,13 @@ void laser_processing(){
             // ! 提取边点和面点（特征点）
             laserProcessing.featureExtraction(pointcloud_in, pointcloud_edge, pointcloud_surf);  
 
-            end = std::chrono::system_clock::now();     
+            end = std::chrono::system_clock::now();         
             std::chrono::duration<float> elapsed_seconds = end - start;
             total_frame++;
-            float time_temp = elapsed_seconds.count() * 1000;
+            float time_temp = elapsed_seconds.count() * 1000;                                                       
             total_time+=time_temp;
             //ROS_INFO("average laser processing time %f ms \n \n", total_time/total_frame);
-
+                
             sensor_msgs::PointCloud2 laserCloudFilteredMsg;
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_filtered(new pcl::PointCloud<pcl::PointXYZI>());  
             *pointcloud_filtered+=*pointcloud_edge;
