@@ -39,11 +39,11 @@ struct LidarEdgeFactor		// ! 线   // 里程计和mapping使用
 		// ! 平行四边形的面积: = residual * de
 		Eigen::Matrix<T, 3, 1> nu = (lp - lpa).cross(lp - lpb);		// 叉乘 
 		Eigen::Matrix<T, 3, 1> de = lpa - lpb;
-		residual[0] = nu.x() / de.norm();		// 点到线的距离 残差  
+		residual[0] = nu.x() / de.norm();		// 点到线的距离 残差    
 		residual[1] = nu.y() / de.norm();
 		residual[2] = nu.z() / de.norm();
 		// 或者如下形式
-		// residual[0] = nu.norm() / de.norm();		// ? 精度似乎会差点
+		// residual[0] = nu.norm() / de.norm();		// ? 精度似乎会差点  floam采用此计算方式
 
 		return true;
 	}		

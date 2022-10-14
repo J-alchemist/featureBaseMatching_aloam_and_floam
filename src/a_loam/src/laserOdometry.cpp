@@ -261,7 +261,7 @@ int main(int argc, char **argv)
                     loss_function = new ceres::HuberLoss(0.1);     // 设置核函数的鲁棒核函数huber , 残差大于0.1的点 ,则权重降低
                     // loss_function = new ceres::CauchyLoss(0.1);                   // 柯西核函数   
 
-                    ceres::LocalParameterization *q_parameterization = new ceres::EigenQuaternionParameterization(); // 由于旋转不满足一般的加法,所以要用 ceres自带的 local Param 
+                    ceres::LocalParameterization *q_parameterization = new ceres::EigenQuaternionParameterization(); // 由于旋转不满足一般的加法,所以要用 ceres自带的local Param去解析独特的加法规则 ,顺序x,y,z,w
                     ceres::Problem::Options problem_options;
                     
                     ceres::Problem problem(problem_options);    

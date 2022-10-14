@@ -36,7 +36,7 @@
 
 #include <math.h>
 #include <vector>
-#include <aloam_velodyne/common.h>
+#include <a_loam/common.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -59,8 +59,8 @@
 #include <string>
 
 #include "lidarFactor.hpp"
-#include "aloam_velodyne/common.h"
-#include "aloam_velodyne/tic_toc.h"
+#include "a_loam/common.h"
+#include "a_loam/tic_toc.h"
 
 
 int frameCount = 0;

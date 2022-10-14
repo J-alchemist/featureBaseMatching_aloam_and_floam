@@ -49,7 +49,7 @@ void OdomEstimationClass::updatePointsToMap(const pcl::PointCloud<pcl::PointXYZI
         kdtreeEdgeMap->setInputCloud(laserCloudCornerMap);      // ! submap建立特征的kd搜索树
         kdtreeSurfMap->setInputCloud(laserCloudSurfMap);        
 
-        for (int iterCount = 0; iterCount < optimization_count; iterCount++){
+        for (int iterCount = 0; iterCount < optimization_count; iterCount++) {
             ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);
             ceres::Problem::Options problem_options;
             ceres::Problem problem(problem_options);
@@ -140,7 +140,7 @@ void OdomEstimationClass::addEdgeCostFactor(const pcl::PointCloud<pcl::PointXYZI
                 point_a = 0.1 * unit_direction + point_on_line;
                 point_b = -0.1 * unit_direction + point_on_line;
 
-                ceres::CostFunction *cost_function = new EdgeAnalyticCostFunction(curr_point, point_a, point_b);  
+                ceres::CostFunction *cost_function = new EdgeAnalyticCostFunction(curr_point, point_a, point_b);    // 计算残差
                 problem.AddResidualBlock(cost_function, loss_function, parameters);
                 corner_num++;   
             }                           
