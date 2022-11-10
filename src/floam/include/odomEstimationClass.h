@@ -45,6 +45,7 @@ class OdomEstimationClass
 		void getMap(pcl::PointCloud<pcl::PointXYZI>::Ptr& laserCloudMap);
 
 		Eigen::Isometry3d odom;
+		Eigen::Isometry3d last_odom;
 		pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudCornerMap;
 		pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudSurfMap;
 	private:
@@ -53,7 +54,7 @@ class OdomEstimationClass
 		Eigen::Map<Eigen::Quaterniond> q_w_curr = Eigen::Map<Eigen::Quaterniond>(parameters);
 		Eigen::Map<Eigen::Vector3d> t_w_curr = Eigen::Map<Eigen::Vector3d>(parameters + 4);
 
-		Eigen::Isometry3d last_odom;
+		// Eigen::Isometry3d last_odom;
 
 		//kd-tree
 		pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtreeEdgeMap;

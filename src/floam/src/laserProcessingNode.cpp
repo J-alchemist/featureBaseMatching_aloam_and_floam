@@ -27,6 +27,7 @@
 #include "lidar.h"
 #include "laserProcessingClass.h"
 
+std::string tracked_frame_id = "base_link";
 
 LaserProcessingClass laserProcessing;
 std::mutex mutex_lock;
@@ -56,9 +57,13 @@ void laser_processing(){
             mutex_lock.lock();
             pcl::PointCloud<pcl::PointXYZI>::Ptr pointcloud_in(new pcl::PointCloud<pcl::PointXYZI>());
             pcl::fromROSMsg(*pointCloudBuf.front(), *pointcloud_in);
+            // 20221108 by guojian
+            // must!!!
+            std::vector<int> vec_idx;
+            pcl::removeNaNFromPointCloud(*pointcloud_in, *pointcloud_in, vec_idx); 
+            //----------------------
             ros::Time pointcloud_time = (pointCloudBuf.front())->header.stamp;
-            std::string this_frame_id = "base_link";
-            // std::string this_frame_id = "rslidar";
+
             pointCloudBuf.pop();
             mutex_lock.unlock();
 
@@ -83,21 +88,20 @@ void laser_processing(){
             *pointcloud_filtered+=*pointcloud_surf;
             pcl::toROSMsg(*pointcloud_filtered, laserCloudFilteredMsg);
             laserCloudFilteredMsg.header.stamp = pointcloud_time;
-            laserCloudFilteredMsg.header.frame_id = this_frame_id;
+            laserCloudFilteredMsg.header.frame_id = tracked_frame_id;
             pubLaserCloudFiltered.publish(laserCloudFilteredMsg);
 
             sensor_msgs::PointCloud2 edgePointsMsg;
             pcl::toROSMsg(*pointcloud_edge, edgePointsMsg);
             edgePointsMsg.header.stamp = pointcloud_time;
-            edgePointsMsg.header.frame_id = this_frame_id;
+            edgePointsMsg.header.frame_id = tracked_frame_id;
             pubEdgePoints.publish(edgePointsMsg);
 
             sensor_msgs::PointCloud2 surfPointsMsg;
             pcl::toROSMsg(*pointcloud_surf, surfPointsMsg);
             surfPointsMsg.header.stamp = pointcloud_time;
-            surfPointsMsg.header.frame_id = this_frame_id;
+            surfPointsMsg.header.frame_id = tracked_frame_id;
             pubSurfPoints.publish(surfPointsMsg);           
-
         }   
         //sleep 2 ms every time
         std::chrono::milliseconds dura(2);
@@ -123,6 +127,7 @@ int main(int argc, char **argv)
     nh.getParam("/min_dis", min_dis);
     nh.getParam("/scan_line", scan_line);
     nh.getParam("/points_topic", points_topic);
+    nh.getParam("odom_child_frame_id", tracked_frame_id);       // 追踪的坐标系 
 
     lidar_param.setScanPeriod(scan_period);
     lidar_param.setVerticalAngle(vertical_angle);
@@ -132,7 +137,7 @@ int main(int argc, char **argv)
     laserProcessing.init(lidar_param);
     // 订阅
     ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>(points_topic, 100, velodyneHandler); // 只负责接收雷达数据
-    // 发布
+    // 发布 
     pubLaserCloudFiltered = nh.advertise<sensor_msgs::PointCloud2>("/velodyne_points_filtered", 100);   // 边特征+面特征的合集， 只需要定位，不需要建图时，可以不发布
     pubEdgePoints = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_edge", 100);   // 边特征
     pubSurfPoints = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_surf", 100);   // 面特征

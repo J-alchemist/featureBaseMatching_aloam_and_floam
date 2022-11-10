@@ -56,15 +56,16 @@ bool SurfNormAnalyticCostFunction::Evaluate(double const *const *parameters, dou
     Eigen::Vector3d point_w = q_w_curr * curr_point + t_w_curr;
     residuals[0] = plane_unit_norm.dot(point_w) + negative_OA_dot_norm;
 
-    if(jacobians != NULL)
+    if(jacobians != NULL) 
     {
         if(jacobians[0] != NULL)        // 计算雅克比
         {
-            Eigen::Matrix3d skew_point_w = skew(point_w);
+            Eigen::Matrix3d skew_point_w = skew(point_w);   // 3*6矩阵，[行0-2，列0-2]存放反对称矩阵，[行0-2，列3-5]存放单位矩阵
             Eigen::Matrix<double, 3, 6> dp_by_se3;
             dp_by_se3.block<3,3>(0,0) = -skew_point_w;
             (dp_by_se3.block<3,3>(0, 3)).setIdentity();
 
+            // J_se3雅克比
             Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor> > J_se3(jacobians[0]);
             J_se3.setZero();
             J_se3.block<1,6>(0,0) = plane_unit_norm.transpose() * dp_by_se3;
@@ -97,7 +98,7 @@ bool PoseSE3Parameterization::Plus(const double *x, const double *delta, double 
 bool PoseSE3Parameterization::ComputeJacobian(const double *x, double *jacobian) const
 {
     // 行主序
-    Eigen::Map<Eigen::Matrix<double, 7, 6, Eigen::RowMajor>> j(jacobian);       // ?! 四元素对旋转向量的雅克比
+    Eigen::Map<Eigen::Matrix<double, 7, 6, Eigen::RowMajor>> j(jacobian);       // ?! (四元素+平移)对 (旋转向量+平移) 的雅克比
     (j.topRows(6)).setIdentity();
     (j.bottomRows(1)).setZero();
 
@@ -105,6 +106,7 @@ bool PoseSE3Parameterization::ComputeJacobian(const double *x, double *jacobian)
 }
 
 // ! 旋转向量转四元素 p52页推倒
+// ?! 实现se(3) 到 SE(3) 的变换
 void getTransformFromSe3(const Eigen::Matrix<double,6,1>& se3, Eigen::Quaterniond& q, Eigen::Vector3d& t) {     
     Eigen::Vector3d omega(se3.data());      // 计算旋转
     Eigen::Vector3d upsilon(se3.data()+3);      // 计算平移
@@ -120,7 +122,7 @@ void getTransformFromSe3(const Eigen::Matrix<double,6,1>& se3, Eigen::Quaternion
     {
         double theta_sq = theta*theta;
         double theta_po4 = theta_sq*theta_sq;
-        imag_factor = 0.5-0.0208333*theta_sq+0.000260417*theta_po4;     // ?加权啥子的吧?
+        imag_factor = 0.5-0.0208333*theta_sq+0.000260417*theta_po4;  
     }
     else
     {
