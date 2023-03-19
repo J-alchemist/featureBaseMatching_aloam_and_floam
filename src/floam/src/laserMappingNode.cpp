@@ -81,7 +81,7 @@ void laser_mapping(){
             odometryBuf.pop();
             mutex_lock.unlock();
             
-            laserMapping.updateCurrentPointsToMap(pointcloud_in,current_pose);
+            laserMapping.updateCurrentPointsToMap(pointcloud_in,current_pose);          // 拼接地图
 
             pcl::PointCloud<pcl::PointXYZI>::Ptr pc_map = laserMapping.getMap();
             sensor_msgs::PointCloud2 PointsMsg;
@@ -89,7 +89,7 @@ void laser_mapping(){
             PointsMsg.header.stamp = pointcloud_time;
             PointsMsg.header.frame_id = "map";
             map_pub.publish(PointsMsg); 
-            
+
         }
         //sleep 2 ms every time
         std::chrono::milliseconds dura(2);

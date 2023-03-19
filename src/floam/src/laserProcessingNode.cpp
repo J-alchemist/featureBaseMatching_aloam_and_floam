@@ -62,7 +62,8 @@ void laser_processing(){
             std::vector<int> vec_idx;
             pcl::removeNaNFromPointCloud(*pointcloud_in, *pointcloud_in, vec_idx); 
             //----------------------
-            ros::Time pointcloud_time = (pointCloudBuf.front())->header.stamp;
+            // ros::Time pointcloud_time = (pointCloudBuf.front())->header.stamp;
+            ros::Time pointcloud_time = ros::Time::now();
 
             pointCloudBuf.pop();
             mutex_lock.unlock();
